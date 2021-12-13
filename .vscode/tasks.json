@@ -1,0 +1,302 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "webserver",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "-m",
+                "http.server",
+                "--directory",
+                "demo"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "wasm_copy",
+            "type": "shell",
+            "command": "robocopy",
+            "args": [
+                "target/wasm32-unknown-unknown/release/",
+                "demo/",
+                "yew_counter.wasm"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "wasm-objdump",
+            "type": "shell",
+            "command": "wasm-objdump",
+            "args": [
+                "target/wasm32-unknown-unknown/debug/yew_counter.wasm",
+                "-x"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "wasm-objdump_release",
+            "type": "shell",
+            "command": "wasm-objdump",
+            "args": [
+                "target/wasm32-unknown-unknown/release/yew_counter.wasm",
+                "-x"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "wasm_bindgen",
+            "type": "shell",
+            "command": "wasm-bindgen",
+            "args": [
+                "target/wasm32-unknown-unknown/debug/yew_counter.wasm",
+                "--out-dir",
+                "demo/"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "wasm_bindgen_release",
+            "type": "shell",
+            "command": "wasm-bindgen",
+            "args": [
+                "target/wasm32-unknown-unknown/release/yew_counter.wasm",
+                "--out-dir",
+                "demo/"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_build",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_build_wasm",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--target",
+                "wasm32-unknown-unknown"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_build_wasm_release",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--release",
+                "--target",
+                "wasm32-unknown-unknown"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_web_build",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "web",
+                "build",
+                "--target=wasm32-unknown-unknown"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_web_build_release",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "web",
+                "build",
+                "--release",
+                "--target=wasm32-unknown-unknown"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_web_start",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "web",
+                "start",
+                "--target",
+                "wasm32-unknown-unknown"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_test",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_run",
+            "type": "shell",
+            "options": {
+                "env": {
+                    "CASE_INSENSITIVE": "1"
+                }
+            },
+            "command": "cargo",
+            "args": [
+                "run"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_run_release",
+            "type": "shell",
+            "options": {
+                "env": {
+                    "CASE_INSENSITIVE": "1"
+                }
+            },
+            "command": "cargo",
+            "args": [
+                "run",
+                "--release"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label": "cargo_doc",
+            "type": "process",
+            "command": "cargo",
+            "args": [
+                "doc",
+                "--open"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+
+        {
+            "label":"Run With Arguments",
+            "type":"shell",
+            "command":"cargo",
+            "group":"none",
+            "args":[
+               "run",
+               {
+                  "value":"--",
+                  "quoting":"weak"
+               },
+               {
+                  "value":"--argumentOne=\"Something\"",
+                  "quoting":"weak"
+               },
+               {
+                  "value":"--argumentTwo=\"Something\"",
+                  "quoting":"weak"
+               }
+            ]
+         }
+    ]
+}
