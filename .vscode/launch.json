@@ -15,19 +15,14 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=main",
+                    "--bin=webgpu_tut",
                     "--package=webgpu_tut"
                 ],
                 "filter": {
-                    "name": "main",
+                    "name": "webgpu_tut",
                     "kind": "bin"
                 }
             },
-            "args": [
-                "to",
-                "poem.txt",
-                "CASE_INSENSITIVE"
-            ],
             "cwd": "${workspaceFolder}"
         },
         {

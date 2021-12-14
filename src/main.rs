@@ -1,3 +1,5 @@
+
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -6,6 +8,29 @@ use winit::{
 
 mod toogle_bool;
 use toogle_bool::BoolToggleExt;
+
+mod vertex;
+use vertex::Vertex;
+
+mod texture;
+use texture::Texture;
+
+const VERTICES: &[Vertex] = &[
+    Vertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614], }, // A
+    Vertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354], }, // B
+    Vertex { position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 0.949397], }, // C
+    Vertex { position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 0.84732914], }, // D
+    Vertex { position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 0.2652641], }, // E
+];
+
+
+const INDICES: &[u16] = &[
+    0, 1, 4,
+    1, 2, 4,
+    2, 3, 4,
+    /* padding */ 0,
+];
+
 
 struct State {
     surface: wgpu::Surface,
@@ -16,7 +41,14 @@ struct State {
     clear_color: wgpu::Color,
     render_pipeline_brown_tri: wgpu::RenderPipeline,
     render_pipeline_color_tri: wgpu::RenderPipeline,
-    use_color_tri_pipeline: bool,
+    space_state_on: bool,
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    num_indices: u32,
+    diffuse_bind_group: wgpu::BindGroup,
+    diffuse_texture: Texture,
+    diffuse_bind_group_2: wgpu::BindGroup,
+    diffuse_texture_2: Texture,
 }
 
 impl State {
@@ -54,6 +86,77 @@ impl State {
         };
         surface.configure(&device, &config);
 
+        let diffuse_bytes = include_bytes!("happy-tree.png");
+        let diffuse_texture = Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap();
+
+        let texture_bind_group_layout = device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler {
+                            // This is only for TextureSampleType::Depth
+                            comparison: false,
+                            // This should be true if the sample_type of the texture is:
+                            //     TextureSampleType::Float { filterable: true }
+                            // Otherwise you'll get an error.
+                            filtering: true,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            }
+        );
+    
+        let diffuse_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    }
+                ],
+                label: Some("diffuse_bind_group"),
+            }
+        );
+
+        let diffuse_bytes = include_bytes!("happy-tree-cartoon.png");
+        let diffuse_texture_2 = Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree-cartoon.png").unwrap();
+
+        let diffuse_bind_group_2 = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&diffuse_texture_2.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&diffuse_texture_2.sampler),
+                    }
+                ],
+                label: Some("diffuse_bind_group_2"),
+            }
+        );
+
         let clear_color = wgpu::Color::GREEN;
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
@@ -64,7 +167,7 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&texture_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -74,7 +177,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main_brown_tri", // 1.
-                buffers: &[], // 2.
+                buffers: &[Vertex::desc(),], // 2.
             },
             fragment: Some(wgpu::FragmentState { // 3.
                 module: &shader,
@@ -111,7 +214,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main_colored_tri", // 1.
-                buffers: &[], // 2.
+                buffers: &[Vertex::desc(),], // 2.
             },
             fragment: Some(wgpu::FragmentState { // 3.
                 module: &shader,
@@ -143,6 +246,24 @@ impl State {
         });
         
         let use_color_tri_pipeline = false;
+        
+        let vertex_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
+
+        let index_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(INDICES),
+                usage: wgpu::BufferUsages::INDEX,
+            }
+        );
+        let num_indices = INDICES.len() as u32;
+
 
         Self {
             surface,
@@ -153,7 +274,14 @@ impl State {
             clear_color,
             render_pipeline_brown_tri,
             render_pipeline_color_tri,
-            use_color_tri_pipeline,
+            space_state_on: use_color_tri_pipeline,
+            vertex_buffer,
+            index_buffer,
+            num_indices,
+            diffuse_bind_group,
+            diffuse_texture,
+            diffuse_bind_group_2,
+            diffuse_texture_2,
         }
     }
 
@@ -189,7 +317,7 @@ impl State {
                     },
                 ..
             } => {
-                self.use_color_tri_pipeline.toggle();
+                self.space_state_on.toggle();
                 true
             },
             _ => false,
@@ -221,13 +349,18 @@ impl State {
                 depth_stencil_attachment: None,
             });
 
-            if self.use_color_tri_pipeline {
-                render_pass.set_pipeline(&self.render_pipeline_color_tri);
+
+            render_pass.set_pipeline(&self.render_pipeline_brown_tri);
+
+            if self.space_state_on {
+                render_pass.set_bind_group(0, &self.diffuse_bind_group_2,&[]);    
             } else {
-                render_pass.set_pipeline(&self.render_pipeline_brown_tri);
+                render_pass.set_bind_group(0, &self.diffuse_bind_group,&[]);    
             }
-            
-            render_pass.draw(0..3, 0..1);
+
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }
     
         // submit will accept anything that implements IntoIter
