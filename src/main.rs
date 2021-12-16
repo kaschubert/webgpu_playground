@@ -15,6 +15,9 @@ use vertex::Vertex;
 mod texture;
 use texture::Texture;
 
+mod camera;
+use camera::{CameraRessources, Camera, OPENGL_TO_WGPU_MATRIX, CameraUniform, CameraController};
+
 const VERTICES: &[Vertex] = &[
     Vertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614], }, // A
     Vertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354], }, // B
@@ -49,11 +52,12 @@ struct State {
     diffuse_texture: Texture,
     diffuse_bind_group_2: wgpu::BindGroup,
     diffuse_texture_2: Texture,
+    camera_ressources: CameraRessources,
 }
 
 impl State {
     // Creating some of the wgpu types requires async code
-    async fn new(window: &Window) -> Self {
+    async fn new(window: &Window) -> anyhow::Result<Self> {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -164,10 +168,15 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
+        let camera_ressources = CameraRessources::new(&config, &device)?;
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[
+                    &texture_bind_group_layout,
+                    &camera_ressources.camera_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -264,8 +273,7 @@ impl State {
         );
         let num_indices = INDICES.len() as u32;
 
-
-        Self {
+        Ok (Self {
             surface,
             device,
             queue,
@@ -282,7 +290,8 @@ impl State {
             diffuse_texture,
             diffuse_bind_group_2,
             diffuse_texture_2,
-        }
+            camera_ressources,
+        })
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -296,6 +305,8 @@ impl State {
 
 
     fn input(&mut self, event: &WindowEvent) -> bool {
+        self.camera_ressources.camera_controller.process_events(event);
+
         match event {
             WindowEvent::CursorMoved { 
                 position, ..
@@ -325,7 +336,9 @@ impl State {
     }
 
     fn update(&mut self) {
-        
+        self.camera_ressources.camera_controller.update_camera(&mut self.camera_ressources.camera);
+        self.camera_ressources.camera_uniform.update_view_proj(&self.camera_ressources.camera);
+        self.queue.write_buffer(&self.camera_ressources.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_ressources.camera_uniform]));
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -357,7 +370,8 @@ impl State {
             } else {
                 render_pass.set_bind_group(0, &self.diffuse_bind_group,&[]);    
             }
-
+            render_pass.set_bind_group(1, &self.camera_ressources.camera_bind_group, &[]);
+            
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
@@ -377,7 +391,7 @@ fn main() {
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     // State::new uses async code, so we're going to wait for it to finish
-    let mut state = pollster::block_on(State::new(&window));
+    let mut state = pollster::block_on(State::new(&window)).unwrap();
 
 
     event_loop.run(move |event, _, control_flow| {
