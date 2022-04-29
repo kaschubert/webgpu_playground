@@ -161,7 +161,7 @@ impl CameraController {
     }
 }
 
-pub struct CameraRessources {
+pub struct CameraResources {
     pub camera: Camera,
     pub camera_uniform: CameraUniform,
     pub camera_buffer: wgpu::Buffer,
@@ -170,7 +170,7 @@ pub struct CameraRessources {
     pub camera_controller: CameraController,
 }
 
-impl CameraRessources {
+impl CameraResources {
 
     pub fn new(config: &wgpu::SurfaceConfiguration, device: &wgpu::Device) -> Result<Self> {
         let camera = Camera {
