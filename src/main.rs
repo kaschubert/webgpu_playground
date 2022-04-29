@@ -42,8 +42,7 @@ struct State {
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     clear_color: wgpu::Color,
-    render_pipeline_brown_tri: wgpu::RenderPipeline,
-    render_pipeline_color_tri: wgpu::RenderPipeline,
+    render_pipeline_texture: wgpu::RenderPipeline,
     space_state_on: bool,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -216,45 +215,6 @@ impl State {
                 alpha_to_coverage_enabled: false, // 4.
             },
         });
-
-        let render_pipeline_color_tri = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline Colored Triangle"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "vs_main_colored_tri", // 1.
-                buffers: &[Vertex::desc(),], // 2.
-            },
-            fragment: Some(wgpu::FragmentState { // 3.
-                module: &shader,
-                entry_point: "fs_main_colored_tri",
-                targets: &[wgpu::ColorTargetState { // 4.
-                    format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList, // 1.
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw, // 2.
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLAMPING
-                clamp_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: None, // 1.
-            multisample: wgpu::MultisampleState {
-                count: 1, // 2.
-                mask: !0, // 3.
-                alpha_to_coverage_enabled: false, // 4.
-            },
-        });
-        
-        let use_color_tri_pipeline = false;
         
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -280,9 +240,8 @@ impl State {
             config,
             size,
             clear_color,
-            render_pipeline_brown_tri,
-            render_pipeline_color_tri,
-            space_state_on: use_color_tri_pipeline,
+            render_pipeline_texture: render_pipeline_brown_tri,
+            space_state_on: false,
             vertex_buffer,
             index_buffer,
             num_indices,
@@ -363,7 +322,7 @@ impl State {
             });
 
 
-            render_pass.set_pipeline(&self.render_pipeline_brown_tri);
+            render_pass.set_pipeline(&self.render_pipeline_texture);
 
             if self.space_state_on {
                 render_pass.set_bind_group(0, &self.diffuse_bind_group_2,&[]);    
