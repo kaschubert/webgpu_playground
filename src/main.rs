@@ -52,6 +52,7 @@ struct State {
     diffuse_bind_group_2: wgpu::BindGroup,
     diffuse_texture_2: Texture,
     camera_resources: CameraResources,
+    object_rotation: cgmath::Deg<f32>,
 }
 
 impl State {
@@ -180,26 +181,26 @@ impl State {
             });
 
         let render_pipeline_brown_tri = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline Brown Triangle"),
+            label: Some("Render Pipeline Textured Polygon"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main_brown_tri", // 1.
-                buffers: &[Vertex::desc(),], // 2.
+                entry_point: "vs_main_textured_poly",
+                buffers: &[Vertex::desc(),],
             },
-            fragment: Some(wgpu::FragmentState { // 3.
+            fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main_brown_tri",
-                targets: &[wgpu::ColorTargetState { // 4.
+                entry_point: "fs_main_textured_poly",
+                targets: &[wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
             primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+                topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw, // 2.
+                front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
                 // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -208,11 +209,11 @@ impl State {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None, // 1.
+            depth_stencil: None,
             multisample: wgpu::MultisampleState {
-                count: 1, // 2.
-                mask: !0, // 3.
-                alpha_to_coverage_enabled: false, // 4.
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
             },
         });
         
@@ -232,6 +233,7 @@ impl State {
             }
         );
         let num_indices = INDICES.len() as u32;
+        let object_rotation = cgmath::Deg(0.0);
 
         Ok (Self {
             surface,
@@ -250,6 +252,7 @@ impl State {
             diffuse_bind_group_2,
             diffuse_texture_2,
             camera_resources,
+            object_rotation,
         })
     }
 
@@ -295,8 +298,10 @@ impl State {
     }
 
     fn update(&mut self) {
+        self.object_rotation += cgmath::Deg(2.0);
+
         self.camera_resources.camera_controller.update_camera(&mut self.camera_resources.camera);
-        self.camera_resources.camera_uniform.update_view_proj(&self.camera_resources.camera);
+        self.camera_resources.camera_uniform.update_view_proj(&self.camera_resources.camera, self.object_rotation);
         self.queue.write_buffer(&self.camera_resources.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_resources.camera_uniform]));
     }
 

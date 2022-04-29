@@ -29,13 +29,10 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        // 1.
+    pub fn build_view_projection_matrix(&self, zObjectRotation: cgmath::Deg<f32>) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
-        // 2.
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        // 3.
-        return OPENGL_TO_WGPU_MATRIX * proj * view;
+        return OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(zObjectRotation);
     }
 }
 
@@ -57,8 +54,8 @@ impl CameraUniform {
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera) {
-        self.view_proj = camera.build_view_projection_matrix().into();
+    pub fn update_view_proj(&mut self, camera: &Camera, zObjectRotation: cgmath::Deg<f32>) {
+        self.view_proj = camera.build_view_projection_matrix(zObjectRotation).into();
     }
 }
 
@@ -189,7 +186,7 @@ impl CameraResources {
 
         // in new() after creating `camera`
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        camera_uniform.update_view_proj(&camera, cgmath::Deg(0.0));
 
         let camera_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {

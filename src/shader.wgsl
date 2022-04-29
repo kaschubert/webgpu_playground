@@ -17,7 +17,7 @@ struct VertexOutput {
 };
 
 [[stage(vertex)]]
-fn vs_main_brown_tri(
+fn vs_main_textured_poly(
     model: VertexInput,
 ) -> VertexOutput {
     var out: VertexOutput;
@@ -34,6 +34,6 @@ var t_diffuse: texture_2d<f32>;
 var s_diffuse: sampler;
 
 [[stage(fragment)]]
-fn fs_main_brown_tri(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+fn fs_main_textured_poly(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     return textureSample(t_diffuse, s_diffuse, in.tex_coords);
 }
