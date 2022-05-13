@@ -6,6 +6,8 @@ use winit::{
     window::{WindowBuilder, Window},
 };
 
+use cgmath::prelude::*;
+
 mod toogle_bool;
 use toogle_bool::BoolToggleExt;
 
@@ -34,6 +36,8 @@ const INDICES: &[u16] = &[
     /* padding */ 0,
 ];
 
+const NUM_INSTANCES_PER_ROW: u32 = 10;
+const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
 
 struct State {
     surface: wgpu::Surface,
@@ -53,6 +57,98 @@ struct State {
     diffuse_texture_2: Texture,
     camera_resources: CameraResources,
     object_rotation: cgmath::Deg<f32>,
+    instances: Vec<Instance>,
+    instance_buffer: wgpu::Buffer,
+}
+
+const ROTATION_SPEED: f32 = 2.0 * std::f32::consts::PI / 180.0;
+
+struct Instance {
+    position: cgmath::Vector3<f32>,
+    rotation: cgmath::Quaternion<f32>,
+}
+
+impl Instance {
+    fn to_raw(&self) -> InstanceRaw {
+        InstanceRaw {
+            model: (cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation)).into(),
+        }
+    }
+}
+
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct InstanceRaw {
+    model: [[f32; 4]; 4],
+}
+
+impl InstanceRaw {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
+            // We need to switch from using a step mode of Vertex to Instance
+            // This means that our shaders will only change to use the next
+            // instance when the shader starts processing a new instance
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    // While our vertex shader only uses locations 0, and 1 now, in later tutorials we'll
+                    // be using 2, 3, and 4, for Vertex. We'll start at slot 5 not conflict with them later
+                    shader_location: 5,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                // A mat4 takes up 4 vertex slots as it is technically 4 vec4s. We need to define a slot
+                // for each vec4. We'll have to reassemble the mat4 in
+                // the shader.
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
+                    shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    shader_location: 7,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                    shader_location: 8,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+            ],
+        }
+    }
+}
+
+fn quat_mul(q: cgmath::Quaternion<f32>, r: cgmath::Quaternion<f32>) -> cgmath::Quaternion<f32> {
+    // This block uses quaternions of the form of
+
+    // q=q0+iq1+jq2+kq3
+
+    // and
+
+    // r=r0+ir1+jr2+kr3.
+
+    // The quaternion product has the form of
+
+    // t=q×r=t0+it1+jt2+kt3,
+
+    // where
+
+    // t0=(r0 q0 − r1 q1 − r2 q2 − r3 q3)
+    // t1=(r0 q1 + r1 q0 − r2 q3 + r3 q2)
+    // t2=(r0 q2 + r1 q3 + r2 q0 − r3 q1)
+    // t3=(r0 q3 − r1 q2 + r2 q1 + r3 q0
+
+    let w = r.s * q.s - r.v.x * q.v.x - r.v.y * q.v.y - r.v.z * q.v.z;
+    let xi = r.s * q.v.x + r.v.x * q.s - r.v.y * q.v.z + r.v.z * q.v.y;
+    let yj = r.s * q.v.y + r.v.x * q.v.z + r.v.y * q.s - r.v.z * q.v.x;
+    let zk = r.s * q.v.z - r.v.x * q.v.y + r.v.y * q.v.x + r.v.z * q.s;
+
+    cgmath::Quaternion::new(w, xi, yj, zk)
 }
 
 impl State {
@@ -186,7 +282,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main_textured_poly",
-                buffers: &[Vertex::desc(),],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -235,6 +331,34 @@ impl State {
         let num_indices = INDICES.len() as u32;
         let object_rotation = cgmath::Deg(0.0);
 
+        let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
+            (0..NUM_INSTANCES_PER_ROW).map(move |x| {
+                let position = cgmath::Vector3 { x: x as f32, y: 0.0, z: z as f32 } - INSTANCE_DISPLACEMENT;
+
+                let rotation = if position.is_zero() {
+                    // this is needed so an object at (0, 0, 0) won't get scaled to zero
+                    // as Quaternions can effect scale if they're not created correctly
+                    cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0))
+                } else {
+                    cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                };
+
+                Instance {
+                    position, rotation,
+                }
+            })
+        }).collect::<Vec<_>>();
+
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(&instance_data),
+                usage: wgpu::BufferUsages::VERTEX |wgpu::BufferUsages::COPY_DST,
+            }
+        );
+
+
         Ok (Self {
             surface,
             device,
@@ -253,6 +377,8 @@ impl State {
             diffuse_texture_2,
             camera_resources,
             object_rotation,
+            instances,
+            instance_buffer,
         })
     }
 
@@ -264,7 +390,6 @@ impl State {
             self.surface.configure(&self.device, &self.config);
         }
     }
-
 
     fn input(&mut self, event: &WindowEvent) -> bool {
         self.camera_resources.camera_controller.process_events(event);
@@ -298,11 +423,20 @@ impl State {
     }
 
     fn update(&mut self) {
-        self.object_rotation += cgmath::Deg(2.0);
+        self.object_rotation += cgmath::Deg(0.0);
 
         self.camera_resources.camera_controller.update_camera(&mut self.camera_resources.camera);
         self.camera_resources.camera_uniform.update_view_proj(&self.camera_resources.camera, self.object_rotation);
         self.queue.write_buffer(&self.camera_resources.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_resources.camera_uniform]));
+    
+        for instance in &mut self.instances {
+            let amount = cgmath::Quaternion::from_angle_y(cgmath::Rad(ROTATION_SPEED));
+            let current = instance.rotation;
+            instance.rotation = quat_mul(amount, current);
+        }
+
+        let instance_data = self.instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instance_data),);
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -337,8 +471,10 @@ impl State {
             render_pass.set_bind_group(1, &self.camera_resources.camera_bind_group, &[]);
             
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32);
         }
     
         // submit will accept anything that implements IntoIter
@@ -356,7 +492,6 @@ fn main() {
 
     // State::new uses async code, so we're going to wait for it to finish
     let mut state = pollster::block_on(State::new(&window)).unwrap();
-
 
     event_loop.run(move |event, _, control_flow| {
             match event {
