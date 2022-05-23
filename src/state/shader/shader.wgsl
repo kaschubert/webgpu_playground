@@ -6,7 +6,6 @@ struct InstanceInput {
 };
 
 // Vertex shader textured poly
-[[block]]
 struct CameraUniform {
     view_proj: mat4x4<f32>;
 };
