@@ -1,14 +1,10 @@
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window},
+    window::{WindowBuilder},
 };
-use wgpu::util::DeviceExt;
-use cgmath::prelude::*;
 
 mod util;
-use util::toggle_bool::BoolToggleExt;
-use util::math_funcs::quat_mul;
 
 mod state;
 use state::state::State;

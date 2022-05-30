@@ -1,11 +1,9 @@
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window},
 };
 
 use wgpu::{
-    Device, SurfaceConfiguration, util::DeviceExt
+    util::DeviceExt
 };
 
 use anyhow::*;

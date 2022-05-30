@@ -5,6 +5,7 @@ use crate::state::render_components::instance::InstanceRaw;
 use crate::state::render_components::instance::INSTANCE_DISPLACEMENT;
 use crate::state::render_components::instance::NUM_INSTANCES_PER_ROW;
 use crate::state::render_components::camera::*;
+use crate::state::render_components::depth_renderpass::DepthPass;
 use crate::util::toggle_bool::BoolToggleExt;
 use crate::util::math_funcs::quat_mul;
 
@@ -37,26 +38,27 @@ const INDICES: &[u16] = &[
 const ROTATION_SPEED: f32 = 2.0 * std::f32::consts::PI / 180.0;
 
 pub struct State {
-    surface: wgpu::Surface,
-    device: wgpu::Device,
+    pub surface: wgpu::Surface,
+    pub device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
-    clear_color: wgpu::Color,
-    render_pipeline_texture: wgpu::RenderPipeline,
-    space_state_on: bool,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    num_indices: u32,
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: Texture,
-    diffuse_bind_group_2: wgpu::BindGroup,
-    diffuse_texture_2: Texture,
-    camera_resources: CameraResources,
+    pub clear_color: wgpu::Color,
+    pub render_pipeline_texture: wgpu::RenderPipeline,
+    pub space_state_on: bool,
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub num_indices: u32,
+    pub diffuse_bind_group: wgpu::BindGroup,
+    pub diffuse_texture: Texture,
+    pub diffuse_bind_group_2: wgpu::BindGroup,
+    pub diffuse_texture_2: Texture,
+    pub camera_resources: CameraResources,
     object_rotation: cgmath::Deg<f32>,
-    instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
-    depth_texture: Texture,
+    pub instances: Vec<Instance>,
+    pub instance_buffer: wgpu::Buffer,
+    pub depth_texture: Texture,
+    depth_pass: DepthPass,
 }
 
 
@@ -270,6 +272,7 @@ impl State {
             }
         );
 
+        let depth_pass = DepthPass::new(&device, &config);
 
         Ok (Self {
             surface,
@@ -292,6 +295,7 @@ impl State {
             instances,
             instance_buffer,
             depth_texture,
+            depth_pass,
         })
     }
 
@@ -301,7 +305,11 @@ impl State {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+
             self.depth_texture = Texture::create_depth_texture(&self.device, &self.config, "depth_texture");
+
+            self.depth_pass.resize(&self.device, &self.config);
+            self.camera_resources.camera.aspect = self.config.width as f32 / self.config.height as f32;
         }
     }
 
@@ -372,7 +380,7 @@ impl State {
                     },
                 }],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
+                    view: &self.depth_pass.texture.view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,
@@ -398,6 +406,8 @@ impl State {
             render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32);
         }
     
+        self.depth_pass.render(&view, &mut encoder);
+
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
