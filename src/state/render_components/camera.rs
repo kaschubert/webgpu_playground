@@ -27,10 +27,10 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn build_view_projection_matrix(&self, zObjectRotation: cgmath::Deg<f32>) -> cgmath::Matrix4<f32> {
+    pub fn build_view_projection_matrix(&self, z_object_rotation: cgmath::Deg<f32>) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        return OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(zObjectRotation);
+        return OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(z_object_rotation);
     }
 }
 

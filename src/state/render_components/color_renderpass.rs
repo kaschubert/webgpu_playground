@@ -3,13 +3,10 @@ use cgmath::*;
 
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window},
-    dpi::PhysicalSize
 };
 
 use super::texture::Texture;
-use super::vertex::Vertex;
+use super::model::{Vertex, ModelVertex, Model, DrawModel};
 use super::camera::CameraResources;
 use super::instance::{Instance, InstanceRaw};
 use super::instance::INSTANCE_DISPLACEMENT;
@@ -17,13 +14,14 @@ use super::instance::NUM_INSTANCES_PER_ROW;
 
 use crate::util::math_funcs::quat_mul;
 use crate::util::toggle_bool::BoolToggleExt;
+use crate::wasm::resources;
 
-const VERTICES: &[Vertex] = &[
-    Vertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614], }, // A
-    Vertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354], }, // B
-    Vertex { position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 0.949397], }, // C
-    Vertex { position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 0.84732914], }, // D
-    Vertex { position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 0.2652641], }, // E
+const VERTICES: &[ModelVertex] = &[
+    ModelVertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614], normal: [1.0, 1.0, 1.0],}, // A
+    ModelVertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354], normal: [1.0, 1.0, 1.0],}, // B
+    ModelVertex { position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 0.949397], normal: [1.0, 1.0, 1.0],}, // C
+    ModelVertex { position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 0.84732914], normal: [1.0, 1.0, 1.0],}, // D
+    ModelVertex { position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 0.2652641], normal: [1.0, 1.0, 1.0],}, // E
 ];
 const INDICES: &[u16] = &[
     0, 1, 4,
@@ -51,11 +49,12 @@ pub struct ColorPass {
     space_state_on: bool,
     size: winit::dpi::PhysicalSize<u32>,
     object_rotation: Deg<f32>,
+    model: Model,
 }
 
 impl ColorPass {
-    pub fn new(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, queue: &wgpu::Queue) -> Self {
-        let diffuse_bytes = include_bytes!("../data/happy-tree.png");
+    pub async fn new(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, queue: &wgpu::Queue) -> Self {
+        let diffuse_bytes = include_bytes!("../../../data/happy-tree.png");
         let diffuse_texture = Texture::from_bytes(device, queue, diffuse_bytes, "happy-tree.png").unwrap();
 
         let texture_bind_group_layout = device.create_bind_group_layout(
@@ -99,7 +98,7 @@ impl ColorPass {
             }
         );
 
-        let diffuse_bytes = include_bytes!("../data/happy-tree-cartoon.png");
+        let diffuse_bytes = include_bytes!("../../../data/happy-tree-cartoon.png");
         let diffuse_texture_2 = Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree-cartoon.png").unwrap();
 
         let diffuse_bind_group_2 = device.create_bind_group(
@@ -144,7 +143,7 @@ impl ColorPass {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main_textured_poly",
-                buffers: &[Vertex::desc(), InstanceRaw::desc()],
+                buffers: &[ModelVertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -199,9 +198,16 @@ impl ColorPass {
         );
         let num_indices = INDICES.len() as u32;
 
+        const SPACE_BETWEEN: f32 = 3.0;
+
         let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
             (0..NUM_INSTANCES_PER_ROW).map(move |x| {
-                let position = cgmath::Vector3 { x: x as f32, y: 0.0, z: z as f32 } - INSTANCE_DISPLACEMENT;
+                //let position = cgmath::Vector3 { x: x as f32, y: 0.0, z: z as f32 } - INSTANCE_DISPLACEMENT;
+
+                let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+                let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+
+                let position = cgmath::Vector3 { x, y: 0.0, z };
 
                 let rotation = if position.is_zero() {
                     // this is needed so an object at (0, 0, 0) won't get scaled to zero
@@ -229,6 +235,14 @@ impl ColorPass {
         let size = winit::dpi::PhysicalSize::new(config.width, config.height);
         let object_rotation = cgmath::Deg(0.0f32);
 
+        let obj_model = resources::load_model(
+            std::path::Path::new("models/cube/"),
+            "cube.obj",
+            &device,
+            &queue,
+            &texture_bind_group_layout,
+        ).await.unwrap();
+
         Self {
             clear_color, 
             texture: diffuse_texture,
@@ -246,6 +260,7 @@ impl ColorPass {
             space_state_on: false,
             size,
             object_rotation,
+            model: obj_model,
         }
     }
 
@@ -324,18 +339,11 @@ impl ColorPass {
         });
 
         render_pass.set_pipeline(&self.render_pipeline);
-
-        if self.space_state_on {
-            render_pass.set_bind_group(0, &self.bind_group_2,&[]);    
-        } else {
-            render_pass.set_bind_group(0, &self.bind_group,&[]);    
-        }
-        render_pass.set_bind_group(1, &self.camera_resources.camera_bind_group, &[]);
-        
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-        render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32);
+        render_pass.draw_model_instanced(
+            &self.model,
+            0..self.instances.len() as u32,
+            &self.camera_resources.camera_bind_group
+        );
     }
 }

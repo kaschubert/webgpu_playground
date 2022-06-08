@@ -4,16 +4,8 @@ use crate::state::render_components::depth_renderpass::DepthPass;
 
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window},
+    window::{Window},
 };
-
-use wgpu::*;
-use wgpu::util::DeviceExt;
-
-use cgmath::*;
-
-use bytemuck::Zeroable;
 
 pub struct State {
     pub surface: wgpu::Surface,
@@ -60,7 +52,7 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let color_pass = ColorPass::new(&device, &config, &queue);
+        let color_pass = ColorPass::new(&device, &config, &queue).await;
         let depth_pass = DepthPass::new(&device, &config);
 
         Ok (Self {

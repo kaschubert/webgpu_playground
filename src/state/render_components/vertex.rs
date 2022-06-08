@@ -1,6 +1,3 @@
-use bytemuck::Zeroable;
-use wgpu::*;
-
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {

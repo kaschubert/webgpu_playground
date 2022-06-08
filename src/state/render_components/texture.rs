@@ -1,6 +1,5 @@
 use image::GenericImageView;
 use anyhow::*;
-use wgpu::*;
 
 pub struct Texture {
     pub texture: wgpu::Texture,
@@ -25,8 +24,9 @@ impl Texture {
         img: &image::DynamicImage,
         label: Option<&str>
     ) -> Result<Self> {
-        let rgba = img.as_rgba8().unwrap();
+        //let rgba = img.as_rgba8().unwrap();
         let dimensions = img.dimensions();
+        let rgba = img.to_rgba8();
 
         let size = wgpu::Extent3d {
             width: dimensions.0,
@@ -52,7 +52,7 @@ impl Texture {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            rgba,
+            &rgba,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: std::num::NonZeroU32::new(4 * dimensions.0),
