@@ -183,7 +183,7 @@ impl CameraResources {
             aspect: config.width as f32 / config.height as f32,
             fovy: 45.0,
             znear: 0.1,
-            zfar: 100.0,
+            zfar: 10000.0,
         };
 
         // in new() after creating `camera`

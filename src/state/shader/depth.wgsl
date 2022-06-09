@@ -30,7 +30,7 @@ var s_shadow: sampler;
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     let near = 0.1;
-    let far = 100.0;
+    let far = 10000.0;
     //let depth = textureSampleCompare(t_shadow, s_shadow, in.tex_coords, in.clip_position.w);
     
     let depth_real = textureSample(t_shadow, s_shadow, in.tex_coords);
