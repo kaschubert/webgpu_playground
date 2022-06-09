@@ -39,6 +39,7 @@ impl Camera {
 // This is so we can store this in a buffer
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
+    view_position: [f32; 4],
     // We can't use cgmath with bytemuck directly so we'll have
     // to convert the Matrix4 into a 4x4 f32 array
     view_proj: [[f32; 4]; 4],
@@ -48,12 +49,15 @@ impl CameraUniform {
     pub fn new() -> Self {
         use cgmath::SquareMatrix;
         Self {
+            view_position: [0.0; 4],
             view_proj: cgmath::Matrix4::identity().into(),
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera, zObjectRotation: cgmath::Deg<f32>) {
-        self.view_proj = camera.build_view_projection_matrix(zObjectRotation).into();
+    pub fn update_view_proj(&mut self, camera: &Camera, z_object_rotation: cgmath::Deg<f32>) {
+        // We're using Vector4 because of the uniforms 16 byte spacing requirement
+        self.view_position = camera.eye.to_homogeneous().into();
+        self.view_proj = camera.build_view_projection_matrix(z_object_rotation).into();
     }
 }
 
@@ -171,7 +175,7 @@ impl CameraResources {
         let camera = Camera {
             // position the camera one unit up and 2 units back
             // +z is out of the screen
-            eye: (0.0, 1.0, 2.0).into(),
+            eye: (0.0, 16.0, 64.0).into(),
             // have it look at the origin
             target: (0.0, 0.0, 0.0).into(),
             // which way is "up"
@@ -198,7 +202,7 @@ impl CameraResources {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,

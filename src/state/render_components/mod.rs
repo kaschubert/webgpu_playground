@@ -3,5 +3,7 @@ pub mod model;
 pub mod texture;
 pub mod instance;
 pub mod camera;
+pub mod light;
+pub mod render_pipeline;
 pub mod color_renderpass;
 pub mod depth_renderpass;
