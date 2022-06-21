@@ -22,13 +22,6 @@ pub struct State {
     depth_pass: DepthPass,
 }
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
-#[cfg(target_arch = "wasm32")]
-use web_sys::HtmlCanvasElement;
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowBuilderExtWebSys;
-
 impl State {
     // Creating some of the wgpu types requires async code
     pub async fn new(window: &Window) -> anyhow::Result<Self> {
@@ -63,7 +56,6 @@ impl State {
             #[cfg(target_arch = "wasm32")]
             let needed_limits = wgpu::Limits::downlevel_webgl2_defaults()
                 .using_resolution(adapter.limits());
-    
             #[cfg(not(target_arch = "wasm32"))]
             let needed_limits = wgpu::Limits::default();
     

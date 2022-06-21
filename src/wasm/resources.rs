@@ -20,7 +20,7 @@ fn format_url(file_name: &str) -> reqwest::Url {
 pub async fn load_string(file_path: &std::path::Path, file_name: &str) -> anyhow::Result<String> {
     cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
-            let url = format_url(file_path.join(file_name));
+            let url = format_url(file_path.join(file_name).to_str().unwrap());
             let txt = reqwest::get(url)
                 .await?
                 .text()
@@ -40,7 +40,7 @@ pub async fn load_string(file_path: &std::path::Path, file_name: &str) -> anyhow
 pub async fn load_binary(file_path: &std::path::Path, file_name: &str) -> anyhow::Result<Vec<u8>> {
     cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
-            let url = format_url(file_path.join(file_name));
+            let url = format_url(file_path.join(file_name).to_str().unwrap());
             let data = reqwest::get(url)
                 .await?
                 .bytes()

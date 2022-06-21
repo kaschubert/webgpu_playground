@@ -17,7 +17,13 @@ mod wasm;
 mod state;
 use state::state::State;
 
-#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
+use web_sys::HtmlCanvasElement;
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowBuilderExtWebSys;
+
 pub async fn run() {
     #[cfg(target_arch = "wasm32")]
     let canvas_element = {
@@ -43,30 +49,10 @@ pub async fn run() {
         .expect("Failed to build winit window");
 
     #[cfg(not(target_arch = "wasm32"))]
-    let title = env!("CARGO_PKG_NAME");
     let window = WindowBuilder::new()
-        .with_title(title)
+        .with_title(env!("CARGO_PKG_NAME"))
         .build(&event_loop)
         .unwrap();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        // Winit prevents sizing with CSS, so we have to set
-        // the size manually when on web.
-        use winit::dpi::PhysicalSize;
-        window.set_inner_size(PhysicalSize::new(450, 400));
-        
-        use winit::platform::web::WindowExtWebSys;
-        web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| {
-                let dst = doc.get_element_by_id("wasm-example")?;
-                let canvas = web_sys::Element::from(window.canvas());
-                dst.append_child(&canvas).ok()?;
-                Some(())
-            })
-            .expect("Couldn't append canvas to document body.");
-    }
 
     // State::new uses async code, so we're going to wait for it to finish
     let mut state = pollster::block_on(State::new(&window)).unwrap();
