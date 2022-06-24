@@ -24,7 +24,12 @@ use web_sys::HtmlCanvasElement;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowBuilderExtWebSys;
 
-pub async fn run() {
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+
+#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
+pub async fn start() {
     #[cfg(target_arch = "wasm32")]
     let canvas_element = {
         console_log::init_with_level(log::Level::Debug)
@@ -55,7 +60,7 @@ pub async fn run() {
         .unwrap();
 
     // State::new uses async code, so we're going to wait for it to finish
-    let mut state = pollster::block_on(State::new(&window)).unwrap();
+    let mut state = State::new(&window).await.unwrap();
 
     let mut cursor_position = PhysicalPosition::new(-1.0, -1.0);
     let mut modifiers = ModifiersState::default();

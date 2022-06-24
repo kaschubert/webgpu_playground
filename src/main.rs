@@ -1,5 +1,5 @@
-use webgpu_tut::run;
+use webgpu_tut_lib::start;
 
 fn main() {
-    pollster::block_on(run());
+    pollster::block_on(start());
 }

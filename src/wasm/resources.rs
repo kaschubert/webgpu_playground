@@ -20,11 +20,13 @@ fn format_url(file_name: &str) -> reqwest::Url {
 pub async fn load_string(file_path: &std::path::Path, file_name: &str) -> anyhow::Result<String> {
     cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
+            log::warn!("Creating url for {}", file_name);
             let url = format_url(file_path.join(file_name).to_str().unwrap());
-            let txt = reqwest::get(url)
-                .await?
-                .text()
-                .await?;
+            log::warn!("Making request for {}", url);
+            let res = reqwest::get(url).await?;
+            log::warn!("Received response");
+            let txt = res.text().await?;
+            log::warn!("Finished request");
         } else {
             let path = std::path::Path::new(env!("OUT_DIR"))
                 .join("data")

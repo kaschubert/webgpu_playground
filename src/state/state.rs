@@ -19,7 +19,7 @@ pub struct State {
     pub physical_size: winit::dpi::PhysicalSize<u32>,
     pub viewport: Viewport,
     color_pass: ColorPass,
-    depth_pass: DepthPass,
+   depth_pass: DepthPass,
 }
 
 impl State {
