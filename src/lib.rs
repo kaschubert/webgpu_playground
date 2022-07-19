@@ -169,14 +169,13 @@ pub async fn start() {
                             let program = iced_state.program();
                             let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-                            {
-                                // We clear the frame
-                                state.clear(
-                                    &view,
-                                    &mut encoder,
-                                    program.background_color(),
-                                );
-                            }
+                            state.color_pass.clear_color = 
+                                wgpu::Color{
+                                    r: program.background_color().r as f64,
+                                    g: program.background_color().g as f64,
+                                    b: program.background_color().b as f64,
+                                    a: program.background_color().a as f64,
+                                } ;
 
                             // Draw the scene
                             state.update();
