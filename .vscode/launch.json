@@ -11,15 +11,15 @@
             },
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'webgpu_tut_models'",
+            "name": "Debug executable 'webgpu_tut_bin'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=webgpu_tut_models",
-                    "--package=webgpu_tut"
+                    "--bin=webgpu_tut_bin",
+                    "--package=webgpu_tut_lib"
                 ],
                 "filter": {
-                    "name": "webgpu_tut_models",
+                    "name": "webgpu_tut_bin",
                     "kind": "bin"
                 }
             },
@@ -28,16 +28,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'webgpu_tut_models'",
+            "name": "Debug unit tests in executable 'webgpu_tut_bin'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=webgpu_tut_models",
-                    "--package=webgpu_tut"
+                    "--bin=webgpu_tut_bin",
+                    "--package=webgpu_tut_lib"
                 ],
                 "filter": {
-                    "name": "webgpu_tut_models",
+                    "name": "webgpu_tut_bin",
                     "kind": "bin"
                 }
             },

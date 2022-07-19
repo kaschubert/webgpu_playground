@@ -71,9 +71,12 @@
             "type": "shell",
             "command": "wasm-bindgen",
             "args": [
-                "target/wasm32-unknown-unknown/debug/yew_counter.wasm",
+                "target/wasm32-unknown-unknown/debug/webgpu_tut_lib.wasm",
                 "--out-dir",
-                "demo/"
+                ".",
+                "--target",
+                "web",
+                "--no-typescript"
             ],
             "group": "build",
             "presentation": {
@@ -87,9 +90,12 @@
             "type": "shell",
             "command": "wasm-bindgen",
             "args": [
-                "target/wasm32-unknown-unknown/release/yew_counter.wasm",
+                "target/wasm32-unknown-unknown/release/webgpu_tut_lib.wasm",
                 "--out-dir",
-                "demo/"
+                ".",
+                "--target",
+                "web",
+                "--no-typescript"
             ],
             "group": "build",
             "presentation": {
