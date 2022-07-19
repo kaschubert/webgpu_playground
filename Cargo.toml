@@ -19,7 +19,8 @@ winit = "0.26"
 cgmath = "0.18"
 env_logger = "0.9"
 log = "0.4"
-wgpu = "0.12.0"
+naga = "0.8"
+wgpu = { version = "0.12.0", features = [ "glsl" ] }
 pollster = "0.2"
 cfg-if = "1"
 bytemuck = { version = "1.4", features = [ "derive" ] }
@@ -29,6 +30,7 @@ iced = { version = "0.4", features = ["tokio"] }
 iced_wgpu = {version = "0.5.1"}
 iced_web = "0.4"
 iced_winit = "0.4"
+iced_aw = { version = "0.2", features = ["icons"]}
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -45,7 +47,7 @@ glob = "0.3"
 reqwest = { version = "0.11" }
 console_error_panic_hook = "0.1"
 console_log = "0.2"
-wgpu = { version = "0.12", features = ["webgl"]}
+wgpu = { version = "0.12"}
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = [
