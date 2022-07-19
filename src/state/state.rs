@@ -1,6 +1,6 @@
 use crate::state::render_components::color_renderpass::ColorPass;
 use crate::state::render_components::depth_renderpass::DepthPass;
-
+use crate::state::render_components::texture::Texture;
 
 use wgpu::SurfaceTexture;
 use winit::{
@@ -18,8 +18,9 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     pub physical_size: winit::dpi::PhysicalSize<u32>,
     pub viewport: Viewport,
-    color_pass: ColorPass,
-   depth_pass: DepthPass,
+    pub color_pass: ColorPass,
+    //depth_pass: DepthPass,
+    depth_texture: Texture,
 }
 
 impl State {
@@ -35,6 +36,8 @@ impl State {
         // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
         #[cfg(target_arch = "wasm32")]
         let default_backend = wgpu::Backends::GL;
+        //let default_backend = wgpu::Backends::BROWSER_WEBGPU;
+        
         #[cfg(not(target_arch = "wasm32"))]
         let default_backend = wgpu::Backends::PRIMARY;
 
@@ -91,7 +94,9 @@ impl State {
         );
 
         let color_pass = ColorPass::new(&device, &config, &queue).await;
-        let depth_pass = DepthPass::new(&device, &config);
+        //let depth_pass = DepthPass::new(&device, &config);
+        
+        let depth_texture = Texture::create_depth_texture(&device, &config, "depth_texture");
 
         Ok (Self {
             surface,
@@ -102,36 +107,8 @@ impl State {
             physical_size,
             viewport,
             color_pass,
-            depth_pass,
-        })
-    }
-
-    pub fn clear<'a>(
-        &self,
-        target: &'a wgpu::TextureView,
-        encoder: &'a mut wgpu::CommandEncoder,
-        background_color: Color,
-    ) -> wgpu::RenderPass<'a> {
-        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[wgpu::RenderPassColorAttachment {
-                view: target,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear({
-                        let [r, g, b, a] = background_color.into_linear();
-
-                        wgpu::Color {
-                            r: r as f64,
-                            g: g as f64,
-                            b: b as f64,
-                            a: a as f64,
-                        }
-                    }),
-                    store: true,
-                },
-            }],
-            depth_stencil_attachment: None,
+            //depth_pass,
+            depth_texture,
         })
     }
 
@@ -142,7 +119,7 @@ impl State {
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
 
-            self.depth_pass.resize(&self.device, &self.config);
+            //self.depth_pass.resize(&self.device, &self.config);
             self.color_pass.resize(&self.device, &self.config);
 
             self.viewport = Viewport::with_physical_size(
@@ -167,7 +144,7 @@ impl State {
     pub fn render(&mut self, encoder: &mut wgpu::CommandEncoder, frame: &SurfaceTexture) -> Result<(), wgpu::SurfaceError> {
         let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.color_pass.render(&view, encoder, &self.depth_pass.texture);
+        self.color_pass.render(&view, encoder, &self.depth_texture);
         //self.depth_pass.render(&view, encoder);
 
         Ok(())

@@ -21,7 +21,7 @@ use crate::wasm::resources;
 const ROTATION_SPEED: f32 = 2.0 * std::f32::consts::PI / 180.0;
 
 pub struct ColorPass {
-    clear_color: wgpu::Color,
+    pub clear_color: wgpu::Color,
     instance_buffer: wgpu::Buffer,
     instances: Vec<Instance>,
     render_pipeline: wgpu::RenderPipeline,
@@ -78,7 +78,7 @@ impl ColorPass {
 
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Color Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("../shader/shader.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shader/wgsl/shader.wgsl").into()),
             };
 
             render_pipeline::create_render_pipeline(
@@ -103,7 +103,7 @@ impl ColorPass {
 
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Light Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("../shader/light.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../shader/wgsl/light.wgsl").into()),
             };
 
             render_pipeline::create_render_pipeline(
@@ -187,13 +187,7 @@ impl ColorPass {
             WindowEvent::CursorMoved { 
                 position, ..
             } => {
-                self.clear_color = wgpu::Color {
-                    r: position.x as f64 / self.size.width as f64,
-                    g: position.y as f64 / self.size.height as f64,
-                    b: 1.0,
-                    a: 1.0,
-                };
-                true
+                false
             },
             WindowEvent::KeyboardInput {
                 input:

@@ -94,7 +94,7 @@ impl DepthPass {
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shadow Display Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shader/depth.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shader/wgsl/depth.wgsl").into()),
         });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
