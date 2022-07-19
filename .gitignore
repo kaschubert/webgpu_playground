@@ -1,1 +1,7 @@
 /target
+Cargo.lock
+Cargo.lock
+favicon.ico
+favicon.png
+webgpu_tut_lib_bg.wasm
+webgpu_tut_lib.js
