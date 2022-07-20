@@ -121,6 +121,7 @@ impl State {
 
             //self.depth_pass.resize(&self.device, &self.config);
             self.color_pass.resize(&self.device, &self.config);
+            self.depth_texture = Texture::create_depth_texture(&self.device, &self.config, "depth_texture");
 
             self.viewport = Viewport::with_physical_size(
                 Size::new(new_size.width, new_size.height),
