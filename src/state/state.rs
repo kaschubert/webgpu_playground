@@ -1,6 +1,6 @@
-use crate::state::render_components::color_renderpass::ColorPass;
-use crate::state::render_components::depth_renderpass::DepthPass;
-use crate::state::render_components::texture::Texture;
+use super::render_components::color_renderpass::ColorPass;
+//use super::render_components::depth_renderpass::DepthPass;
+use super::render_components::texture::Texture;
 
 use wgpu::SurfaceTexture;
 use winit::{
