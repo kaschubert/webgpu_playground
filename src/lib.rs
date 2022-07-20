@@ -8,7 +8,6 @@ use futures::task::SpawnExt;
 
 mod ui;
 use ui::controls::Controls;
-use iced::{Sandbox};
 use iced_wgpu::{wgpu, Backend, Renderer, Settings, Viewport};
 use iced_winit::{conversion, futures, program, winit, Clipboard, Debug, Size};
 mod util;

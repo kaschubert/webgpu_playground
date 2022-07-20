@@ -3,8 +3,13 @@ use iced_winit::widget::slider::{self, Slider};
 use iced_winit::widget::text_input::{self, TextInput};
 use iced_winit::widget::{Column, Row, Text};
 use iced_winit::{Alignment, Color, Command, Element, Length, Program};
+use iced::{button, Button};
+
+use iced_aw::color_picker::{self, ColorPicker};
 
 pub struct Controls {
+    state: color_picker::State,
+    button_state: button::State,
     background_color: Color,
     text: String,
     sliders: [slider::State; 3],
@@ -12,14 +17,20 @@ pub struct Controls {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum Message {
     BackgroundColorChanged(Color),
     TextChanged(String),
+    ChooseColor,
+    SubmitColor(Color),
+    CancelColor,
 }
 
 impl Controls {
     pub fn new() -> Controls {
         Controls {
+            state: color_picker::State::new(),
+            button_state: button::State::new(),
             background_color: Color::BLACK,
             text: Default::default(),
             sliders: Default::default(),
@@ -44,16 +55,44 @@ impl Program for Controls {
             Message::TextChanged(text) => {
                 self.text = text;
             }
+            Message::ChooseColor => {
+                self.state.show(true);
+            }
+            Message::SubmitColor(color) => {
+                self.background_color = color;
+                self.state.show(false);
+            }
+            Message::CancelColor => {
+                self.state.show(false);
+            }
         }
 
         Command::none()
     }
 
     fn view(&mut self) -> Element<Message, Renderer> {
+        let button = Button::new(&mut self.button_state, Text::new("Set Color"))
+            .on_press(Message::ChooseColor);
+
+        let colorpicker = ColorPicker::new(
+            &mut self.state,
+            button,
+            Message::CancelColor,
+            Message::SubmitColor,
+        );
+
         let [r, g, b] = &mut self.sliders;
         let t = &mut self.text_input;
         let background_color = self.background_color;
         let text = &self.text;
+
+        let color_picker_row = Row::new()
+            .align_items(Alignment::Center)
+            .spacing(10)
+            .push(colorpicker)
+            .push(Text::new(format!("Color: {:?}", self.background_color))
+                .color(Color::WHITE),
+        );
 
         let sliders = Row::new()
             .width(Length::Units(500))
@@ -98,6 +137,7 @@ impl Program for Controls {
                         Column::new()
                             .padding(10)
                             .spacing(10)
+                            .push(color_picker_row)
                             .push(
                                 Text::new("Background color")
                                     .color(Color::WHITE),
