@@ -1,6 +1,3 @@
-### How to run this example with WebGL backend
-NOTE: Currently, WebGL backend is is still experimental, so expect bugs.
-
 # 0. Install prerequisites
 cargo install wasm-bindgen-cli https
 # 1. cd to the current folder
